@@ -436,14 +436,22 @@ int OddParity(int val, int num_bits)
 
 MsfBit MsfValue()
 {
-  // UTC time fields
-  int year_2d    = td.tm_year % 100;          // 2-digit year (e.g. 26)
-  int bcd_year   = Int2Bcd(year_2d);          // e.g. 0x26
-  int bcd_month  = Int2Bcd(td.tm_mon + 1);   // 1–12 as BCD
-  int bcd_day    = Int2Bcd(td.tm_mday);       // 1–31 as BCD
-  int day_of_week = td.tm_wday;               // 0=Sun … 6=Sat
-  int bcd_hour   = Int2Bcd(td.tm_hour);       // 0–23 as BCD
-  int bcd_minute = Int2Bcd(td.tm_min);        // 0–59 as BCD
+  // MSF transmits the time of the NEXT minute (the minute that begins
+  // when second-0 marker is received).  Compute td + 1 minute with
+  // full carry propagation (min→hour→day→month→year) via mktime.
+  struct tm next_td = td;
+  next_td.tm_min += 1;
+  next_td.tm_isdst = -1;          // let mktime figure it out
+  mktime(&next_td);               // normalise all fields
+
+  // UTC time fields — from the NEXT minute
+  int year_2d    = next_td.tm_year % 100;          // 2-digit year (e.g. 26)
+  int bcd_year   = Int2Bcd(year_2d);               // e.g. 0x26
+  int bcd_month  = Int2Bcd(next_td.tm_mon + 1);   // 1–12 as BCD
+  int bcd_day    = Int2Bcd(next_td.tm_mday);       // 1–31 as BCD
+  int day_of_week = next_td.tm_wday;               // 0=Sun … 6=Sat
+  int bcd_hour   = Int2Bcd(next_td.tm_hour);       // 0–23 as BCD
+  int bcd_minute = Int2Bcd(next_td.tm_min);        // 0–59 as BCD
 
   // Parity (odd parity — result bit = 1 if 1-count is currently even)
   int p1 = OddParity(bcd_year  & 0xFF, 8);
@@ -451,8 +459,8 @@ MsfBit MsfValue()
   int p3 = OddParity(day_of_week & 0x07, 3);
   int p4 = OddParity((bcd_hour & 0x3F) << 7 | (bcd_minute & 0x7F), 13);
 
-  int bst      = IsBst(td)              ? 1 : 0;
-  int bst_warn = IsBstChangeWarning(td) ? 1 : 0;
+  int bst      = IsBst(next_td)              ? 1 : 0;
+  int bst_warn = IsBstChangeWarning(next_td) ? 1 : 0;
 
   MsfBit bit = {0, 0};
 
