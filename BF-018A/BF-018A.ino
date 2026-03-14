@@ -202,9 +202,11 @@ void TcoInit()
   if (M5.getBoard() == m5::board_t::board_M5AtomS3Lite) {
     ledc_pin = ledc_pin_atoms3;
   }
-  Serial.printf("ledcAttach result= %d\n", ledcAttach(ledc_pin, ledc_frequency, ledc_resolution));
-  Serial.printf("ledcWrite result= %d\n",  ledcWrite(ledc_pin, ledc_duty_on));
-  Serial.printf("pin= %u, duty= %lu, freq= %lu\n", ledc_pin, ledcRead(ledc_pin), ledcReadFreq(ledc_pin));
+  // ESP32 board package v2.x API (ledcSetup + ledcAttachPin)
+  Serial.printf("ledcSetup result= %lf\n", ledcSetup(0, ledc_frequency, ledc_resolution));
+  ledcAttachPin(ledc_pin, 0);
+  ledcWrite(0, ledc_duty_on);
+  Serial.printf("pin= %u, duty= %lu, freq= %lu\n", ledc_pin, ledcRead(0), ledcReadFreq(0));
 
   clock_gettime(CLOCK_REALTIME, &ts);
   delayMicroseconds((150000000 - ts.tv_nsec % 100000000) / 1000);
@@ -324,13 +326,13 @@ void Msf500ms()
 
 void TcOn()
 {
-  ledcWrite(ledc_pin, ledc_duty_on);
+  ledcWrite(0, ledc_duty_on);
   led_b = led_b_on;
 }
 
 void TcOff()
 {
-  ledcWrite(ledc_pin, ledc_duty_off);
+  ledcWrite(0, ledc_duty_off);
   led_b = led_b_off;
 }
 
